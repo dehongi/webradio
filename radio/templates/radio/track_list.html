@@ -1,0 +1,103 @@
+{% extends 'radio/base.html' %}
+
+{% block content %}
+  <h2>Track List</h2>
+  
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-body">
+          <h5 class="card-title">Now Playing</h5>
+          <div id="now-playing">
+            {% if now_playing %}
+              <h6>{{ now_playing }}</h6>
+              <audio id="radio-player" controls class="w-100" src="{{ now_playing.audio_file.url }}"></audio>
+            {% else %}
+              <p>No track is currently playing</p>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    {% for track in tracks %}
+      <div class="col-md-6 mb-3">
+        <div class="card">
+          <div class="card-body">
+            <h5 class="card-title">{{ track.title }}</h5>
+            <h6 class="card-subtitle mb-2 text-muted">{{ track.artist }}</h6>
+            <button class="btn btn-primary play-button" data-track-id="{{ track.id }}">
+              Play on Radio
+            </button>
+            <p class="card-text">
+              <small class="text-muted">Uploaded: {{ track.uploaded_at|date:'F d, Y' }}</small>
+            </p>
+          </div>
+        </div>
+      </div>
+    {% empty %}
+      <div class="col-12">
+        <p>No tracks available yet.</p>
+      </div>
+    {% endfor %}
+  </div>
+
+  <script>
+    const socket = new WebSocket(
+      'ws://' + window.location.host + '/ws/radio/'
+    );
+
+    socket.onopen = function(e) {
+      console.log("WebSocket connection established");
+    };
+
+    socket.onerror = function(error) {
+      console.error("WebSocket error:", error);
+    };
+
+    socket.onclose = function(e) {
+      console.log("WebSocket connection closed:", e.reason);
+    };
+
+    socket.onmessage = function(e) {
+      console.log("Received message:", e.data);
+      const data = JSON.parse(e.data);
+      const message = data.message;
+
+      if (message.action === 'play') {
+        const player = document.getElementById('radio-player');
+        player.src = message.track_url;
+        player.play();
+        
+        const nowPlaying = document.getElementById('now-playing');
+        nowPlaying.innerHTML = `
+          <h6>${message.track_title}</h6>
+          <audio id="radio-player" controls class="w-100" src="${message.track_url}"></audio>
+        `;
+      }
+    };
+
+    document.querySelectorAll('.play-button').forEach(button => {
+      button.addEventListener('click', function() {
+        const trackId = this.dataset.trackId;
+        console.log("Playing track:", trackId);
+        
+        fetch(`/play/${trackId}/`)
+          .then(response => {
+            if (!response.ok) {
+              throw new Error('Network response was not ok');
+            }
+            return response.json();
+          })
+          .then(data => {
+            console.log("Play response:", data);
+          })
+          .catch(error => {
+            console.error("Error playing track:", error);
+          });
+      });
+    });
+  </script>
+{% endblock %}

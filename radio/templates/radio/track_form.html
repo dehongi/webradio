@@ -1,0 +1,10 @@
+{% extends 'radio/base.html' %}
+
+{% block content %}
+  <h2>Upload New Track</h2>
+  <form method="post" enctype="multipart/form-data" class="mt-3">
+    {% csrf_token %}
+    <div class="mb-3">{{ form.as_p }}</div>
+    <button type="submit" class="btn btn-primary">Upload</button>
+  </form>
+{% endblock %}
